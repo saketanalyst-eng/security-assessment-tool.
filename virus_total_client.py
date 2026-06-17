@@ -2,20 +2,25 @@ import requests
 import time
 import os
 import sys
-import hashlib  # <-- NEW: For calculating file hashes
+import hashlib
+import streamlit as st  # <-- ADD THIS
 from dotenv import load_dotenv
 from risk_engine import calculate_risk
-from ai_report import generate_ai_report   
 
-import streamlit as st
-import os
-
+# ---------- SECRET HANDLING (Works Locally + Cloud) ----------
 def get_secret(key):
     """Try st.secrets first (cloud), fallback to os.getenv (local)."""
     try:
         return st.secrets[key]
     except:
         return os.getenv(key)
+
+# Load environment variables (for local development)
+load_dotenv()
+
+# Get API key using the hybrid method
+API_KEY = get_secret("VIRUSTOTAL_API_KEY")
+
 # VirusTotal API base URL
 VT_API_URL = "https://www.virustotal.com/api/v3/"
 
@@ -78,11 +83,9 @@ def scan_ip(ip_address):
     return response.json()
 
 
-# ---------- PART 3: SCAN FILE (FIXED - Handles Duplicates) ----------
+# ---------- PART 3: SCAN FILE (Handles Duplicates) ----------
 def scan_file(file_path):
-    """Upload and scan a file (EXE, ZIP, PDF, etc.) with VirusTotal.
-       Handles duplicates gracefully using SHA-256 hash checking.
-    """
+    """Upload and scan a file (EXE, ZIP, PDF, etc.) with VirusTotal."""
     if not os.path.exists(file_path):
         print(f"❌ File not found: {file_path}")
         return None
@@ -92,7 +95,7 @@ def scan_file(file_path):
         print(f"❌ File too large ({file_size / 1024 / 1024:.1f}MB). Max size is 650MB.")
         return None
     
-    # --- STEP 1: Calculate SHA-256 hash of the file ---
+    # Calculate SHA-256 hash
     sha256_hash = hashlib.sha256()
     with open(file_path, "rb") as f:
         for byte_block in iter(lambda: f.read(4096), b""):
@@ -103,28 +106,24 @@ def scan_file(file_path):
     headers = {"x-apikey": API_KEY}
     file_name = os.path.basename(file_path)
     
-    # --- STEP 2: Check if VirusTotal already knows this file ---
+    # Check if VirusTotal already knows this file
     get_url = VT_API_URL + f"files/{file_hash}"
     print(f"📤 Checking if file already exists in VirusTotal...")
     response = requests.get(get_url, headers=headers)
     
     if response.status_code == 200:
-        # Found in cache! Return the report immediately.
         print("✅ File found in VirusTotal cache. Retrieving report...")
         return response.json()
     
     elif response.status_code == 404:
-        # Not found. Upload it.
         print("📤 File not in cache. Uploading...")
         upload_url = VT_API_URL + "files"
         with open(file_path, "rb") as f:
             files = {"file": (file_name, f, "application/octet-stream")}
             response = requests.post(upload_url, headers=headers, files=files)
         
-        # Handle the "Already Submitted" error (409)
         if response.status_code == 409:
             print("⏳ File is already being scanned by VirusTotal. Waiting and retrying...")
-            # Wait a bit and then try to fetch the report again
             time.sleep(30)
             retry_response = requests.get(get_url, headers=headers)
             if retry_response.status_code == 200:
@@ -135,7 +134,6 @@ def scan_file(file_path):
                 return None
         
         elif response.status_code == 200:
-            # Upload successful, get the analysis ID
             analysis_id = response.json()["data"]["id"]
             print(f"✅ File uploaded. Analysis ID: {analysis_id}")
             return get_analysis_results(analysis_id)
@@ -149,7 +147,7 @@ def scan_file(file_path):
         return None
 
 
-# ---------- EXTRACT STATISTICS (Handles both URLs/Files AND IPs) ----------
+# ---------- EXTRACT STATISTICS ----------
 def extract_stats(report_data):
     """Extract key threat stats from the VirusTotal report."""
     if not report_data:
@@ -158,7 +156,6 @@ def extract_stats(report_data):
     try:
         attributes = report_data["data"]["attributes"]
         
-        # IMPORTANT: Check for both 'stats' (URLs/Files) and 'last_analysis_stats' (IPs)
         if 'stats' in attributes:
             stats = attributes['stats']
         elif 'last_analysis_stats' in attributes:
@@ -209,13 +206,6 @@ def run_scan(input_type, input_value):
         print(f"   Details: {risk_result['details']}")
     else:
         print("❌ Could not extract statistics from the report.")
-            # --- GENERATE AI REPORT ---
-    print("\n🤖 Generating AI-powered security report...")
-    ai_report = generate_ai_report(input_type, input_value, risk_result)
-    print("\n" + "="*50)
-    print("📄 AI-GENERATED SECURITY REPORT")
-    print("="*50)
-    print(ai_report)    
 
 
 # ---------- COMMAND LINE ARGUMENTS ----------
@@ -224,7 +214,7 @@ if __name__ == "__main__":
     print(f"🔑 API Key loaded: {'✅' if API_KEY else '❌ Not found!'}")
     
     if not API_KEY:
-        print("❌ Error: API key not found. Please check your .env file.")
+        print("❌ Error: API key not found. Please check your .env file or Streamlit secrets.")
         sys.exit(1)
     
     if len(sys.argv) >= 3:
@@ -232,7 +222,6 @@ if __name__ == "__main__":
         input_value = sys.argv[2]
         run_scan(input_type, input_value)
     else:
-        # --- DEMO MODE ---
         print("\n📋 No arguments provided. Running DEMO with all 3 test cases:\n")
         
         run_scan("url", "google.com")

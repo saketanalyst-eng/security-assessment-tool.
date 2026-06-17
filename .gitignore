@@ -5,3 +5,7 @@ __pycache__/
 .DS_Store
 temp_*
 test_scan.txt
+.gitignore
+.vscode/
+*.log
+*.sqlite3

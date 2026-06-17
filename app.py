@@ -455,8 +455,16 @@ if st.session_state.results:
         summary = "The submitted input appears to be safe based on security vendor analysis."
         recommendations = "- No immediate action required.\n- Continue normal monitoring."
     
-    # Display the enhanced AI report
-    st.markdown(f"""
+    # Format recommendations as HTML list items
+    rec_items = []
+    for rec in recommendations.split('\n'):
+        if rec.strip():
+            clean_rec = rec.strip().lstrip('-').lstrip('*').strip()
+            rec_items.append(f'<li>{clean_rec}</li>')
+    rec_html = ''.join(rec_items)
+    
+    # Display using st.markdown with HTML rendering enabled
+    html_content = f"""
     <div class="ai-report-container">
         <div class="ai-report-content">
             <div class="ai-report-badge">🤖 AI Generated • Security Analysis</div>
@@ -469,7 +477,7 @@ if st.session_state.results:
             <div class="ai-recommendations">
                 <strong style="color: #00b4d8;">💡 Recommendations</strong>
                 <ul style="margin: 0.5rem 0 0 0; padding-left: 0; list-style-type: none;">
-                    {''.join([f'<li>{rec.strip("- ")}</li>' for rec in recommendations.split('\n') if rec.strip()])}
+                    {rec_html}
                 </ul>
             </div>
             
@@ -478,7 +486,9 @@ if st.session_state.results:
             </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    
+    st.markdown(html_content, unsafe_allow_html=True)
     
     # ---------- Row 4: Raw Data (Expandable) ----------
     with st.expander("📋 View Raw Scan Data (JSON)"):

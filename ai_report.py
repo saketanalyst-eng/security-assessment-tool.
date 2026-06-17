@@ -1,16 +1,21 @@
 import os
+import streamlit as st
 from dotenv import load_dotenv
 
-import streamlit as st
-import os
-
+# ---------- SECRET HANDLING (Works Locally + Cloud) ----------
 def get_secret(key):
+    """Try st.secrets first (cloud), fallback to os.getenv (local)."""
     try:
         return st.secrets[key]
     except:
         return os.getenv(key)
 
+# Load environment variables (for local development)
+load_dotenv()
+
+# Get API key using the hybrid method
 GROQ_API_KEY = get_secret("GROQ_API_KEY")
+
 
 def generate_ai_report(input_type, input_value, risk_data):
     """
@@ -41,7 +46,7 @@ def generate_ai_report(input_type, input_value, risk_data):
                         "content": prompt,
                     }
                 ],
-                model="llama-3.3-70b-versatile",  # Fast, free, excellent quality
+                model="llama-3.3-70b-versatile",
                 temperature=0.3,
                 max_tokens=500,
             )

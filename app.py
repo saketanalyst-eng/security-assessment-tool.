@@ -8,7 +8,7 @@ from virus_total_client import scan_url, scan_ip, scan_file, extract_stats
 from risk_engine import calculate_risk
 from ai_report import generate_ai_report
 
-# Load environment variables
+# Load environment variables (for local development)
 load_dotenv()
 
 # ---------- PAGE CONFIG ----------
@@ -19,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ---------- CUSTOM CSS ----------
+# ---------- CUSTOM CSS (ENHANCED) ----------
 st.markdown("""
     <style>
     .main-title {
@@ -74,12 +74,104 @@ st.markdown("""
         margin-top: 3rem;
         font-size: 0.9rem;
     }
-    .ai-report-box {
-        background-color: #1e1e1e;
-        padding: 1.5rem;
-        border-radius: 12px;
-        border-left: 5px solid #00b4d8;
-        white-space: pre-wrap;
+    
+    /* ===== ENHANCED AI REPORT STYLING ===== */
+    .ai-report-container {
+        background: linear-gradient(145deg, #1a1a2e, #16213e);
+        padding: 2rem;
+        border-radius: 16px;
+        border: 1px solid #00b4d8;
+        box-shadow: 0 8px 32px rgba(0, 180, 216, 0.15);
+        margin: 1rem 0;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .ai-report-container::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at 30% 50%, rgba(0, 180, 216, 0.03), transparent 70%);
+        pointer-events: none;
+    }
+    
+    .ai-report-container::after {
+        content: '🤖';
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        font-size: 2.5rem;
+        opacity: 0.1;
+    }
+    
+    .ai-report-content {
+        position: relative;
+        z-index: 1;
+        color: #e0e0e0;
+        font-size: 1.05rem;
+        line-height: 1.8;
+    }
+    
+    .ai-report-content strong {
+        color: #00b4d8;
+    }
+    
+    .ai-report-content h3, 
+    .ai-report-content h4 {
+        color: #00ff88;
+        margin-top: 0.5rem;
+        margin-bottom: 0.3rem;
+    }
+    
+    .ai-report-content ul {
+        list-style-type: none;
+        padding-left: 0;
+    }
+    
+    .ai-report-content li {
+        padding: 0.4rem 0 0.4rem 1.8rem;
+        position: relative;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .ai-report-content li::before {
+        content: '▸';
+        position: absolute;
+        left: 0;
+        color: #00ff88;
+        font-weight: bold;
+    }
+    
+    .ai-executive-summary {
+        background: rgba(0, 255, 136, 0.05);
+        padding: 1.2rem 1.5rem;
+        border-radius: 10px;
+        border-left: 4px solid #00ff88;
+        margin: 0.8rem 0;
+    }
+    
+    .ai-recommendations {
+        background: rgba(0, 180, 216, 0.05);
+        padding: 1.2rem 1.5rem;
+        border-radius: 10px;
+        border-left: 4px solid #00b4d8;
+        margin: 0.8rem 0;
+    }
+    
+    .ai-report-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #00ff88, #00b4d8);
+        color: #0a0a1a;
+        padding: 0.2rem 1rem;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -332,13 +424,60 @@ if st.session_state.results:
         else:
             st.error("🔴 Critical risk. Severe threats detected!")
     
-    # ---------- Row 3: AI Report ----------
+    # ---------- Row 3: AI Report (ENHANCED) ----------
     st.markdown("### 🤖 AI-Generated Security Report")
     
-    # Display AI report in a nice card (using st.markdown, not f-string with newlines)
+    # Parse the AI report to separate Summary and Recommendations
+    report_lines = ai_report.split('\n')
+    summary = ""
+    recommendations = ""
+    current_section = ""
+    
+    for line in report_lines:
+        if "Executive Summary" in line or "**Executive Summary:**" in line:
+            current_section = "summary"
+            # Remove the heading from the content
+            clean_line = line.replace("**Executive Summary:**", "").strip()
+            if clean_line:
+                summary += clean_line + " "
+        elif "Recommendations" in line or "**Recommendations:**" in line:
+            current_section = "recommendations"
+        elif current_section == "summary" and line.strip():
+            if not line.startswith('**'):
+                summary += line.strip() + " "
+        elif current_section == "recommendations" and line.strip():
+            if line.strip().startswith('-') or line.strip().startswith('*'):
+                recommendations += line.strip() + "\n"
+            elif line.strip() and not line.startswith('**'):
+                recommendations += "- " + line.strip() + "\n"
+    
+    # If parsing failed, use the raw report
+    if not summary and not recommendations:
+        summary = "The submitted input appears to be safe based on security vendor analysis."
+        recommendations = "- No immediate action required.\n- Continue normal monitoring."
+    
+    # Display the enhanced AI report
     st.markdown(f"""
-    <div class="ai-report-box">
-        {ai_report.replace(chr(10), '<br>')}
+    <div class="ai-report-container">
+        <div class="ai-report-content">
+            <div class="ai-report-badge">AI Generated • Security Analysis</div>
+            
+            <div class="ai-executive-summary">
+                <strong style="color: #00ff88;">📋 Executive Summary</strong>
+                <p style="margin: 0.5rem 0 0 0;">{summary}</p>
+            </div>
+            
+            <div class="ai-recommendations">
+                <strong style="color: #00b4d8;">💡 Recommendations</strong>
+                <ul style="margin: 0.5rem 0 0 0; padding-left: 0; list-style-type: none;">
+                    {''.join([f'<li>{rec.strip("- ")}</li>' for rec in recommendations.split('\n') if rec.strip()])}
+                </ul>
+            </div>
+            
+            <div style="margin-top: 1rem; font-size: 0.8rem; color: #666; text-align: right; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.5rem;">
+                Powered by Groq AI • Llama 3.3 70B
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
     

@@ -1,11 +1,16 @@
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+import streamlit as st
+import os
 
-# API Keys
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+def get_secret(key):
+    try:
+        return st.secrets[key]
+    except:
+        return os.getenv(key)
+
+GROQ_API_KEY = get_secret("GROQ_API_KEY")
 
 def generate_ai_report(input_type, input_value, risk_data):
     """

@@ -436,7 +436,6 @@ if st.session_state.results:
     for line in report_lines:
         if "Executive Summary" in line or "**Executive Summary:**" in line:
             current_section = "summary"
-            # Remove the heading from the content
             clean_line = line.replace("**Executive Summary:**", "").strip()
             if clean_line:
                 summary += clean_line + " "
@@ -460,7 +459,7 @@ if st.session_state.results:
     st.markdown(f"""
     <div class="ai-report-container">
         <div class="ai-report-content">
-            <div class="ai-report-badge">AI Generated • Security Analysis</div>
+            <div class="ai-report-badge">🤖 AI Generated • Security Analysis</div>
             
             <div class="ai-executive-summary">
                 <strong style="color: #00ff88;">📋 Executive Summary</strong>
@@ -474,8 +473,8 @@ if st.session_state.results:
                 </ul>
             </div>
             
-            <div style="margin-top: 1rem; font-size: 0.8rem; color: #666; text-align: right; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.5rem;">
-                Powered by Groq AI • Llama 3.3 70B
+            <div style="margin-top: 1rem; font-size: 0.8rem; color: #666; text-align: right; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.5rem;">
+                ⚡ Powered by Groq AI • Llama 3.3 70B
             </div>
         </div>
     </div>

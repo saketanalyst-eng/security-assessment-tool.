@@ -7,10 +7,15 @@ from dotenv import load_dotenv
 from risk_engine import calculate_risk
 from ai_report import generate_ai_report   
 
-# Load the API key from .env file
-load_dotenv()
-API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
+import streamlit as st
+import os
 
+def get_secret(key):
+    """Try st.secrets first (cloud), fallback to os.getenv (local)."""
+    try:
+        return st.secrets[key]
+    except:
+        return os.getenv(key)
 # VirusTotal API base URL
 VT_API_URL = "https://www.virustotal.com/api/v3/"
 

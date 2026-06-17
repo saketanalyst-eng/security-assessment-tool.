@@ -424,13 +424,13 @@ if st.session_state.results:
         else:
             st.error("🔴 Critical risk. Severe threats detected!")
     
-    # ---------- Row 3: AI Report (ENHANCED) ----------
+    # ---------- Row 3: AI Report (FIXED - Using st.html) ----------
     st.markdown("### 🤖 AI-Generated Security Report")
     
     # Parse the AI report to separate Summary and Recommendations
     report_lines = ai_report.split('\n')
     summary = ""
-    recommendations = ""
+    recommendations = []
     current_section = ""
     
     for line in report_lines:
@@ -446,25 +446,21 @@ if st.session_state.results:
                 summary += line.strip() + " "
         elif current_section == "recommendations" and line.strip():
             if line.strip().startswith('-') or line.strip().startswith('*'):
-                recommendations += line.strip() + "\n"
+                clean_rec = line.strip().lstrip('-').lstrip('*').strip()
+                recommendations.append(clean_rec)
             elif line.strip() and not line.startswith('**'):
-                recommendations += "- " + line.strip() + "\n"
+                recommendations.append(line.strip())
     
-    # If parsing failed, use the raw report
+    # If parsing failed, use default values
     if not summary and not recommendations:
         summary = "The submitted input appears to be safe based on security vendor analysis."
-        recommendations = "- No immediate action required.\n- Continue normal monitoring."
+        recommendations = ["No immediate action required.", "Continue normal monitoring."]
     
-    # Format recommendations as HTML list items
-    rec_items = []
-    for rec in recommendations.split('\n'):
-        if rec.strip():
-            clean_rec = rec.strip().lstrip('-').lstrip('*').strip()
-            rec_items.append(f'<li>{clean_rec}</li>')
-    rec_html = ''.join(rec_items)
+    # Build recommendation list HTML
+    rec_items = ''.join([f'<li>{rec}</li>' for rec in recommendations if rec])
     
-    # Display using st.markdown with HTML rendering enabled
-    html_content = f"""
+    # Build the HTML content for the AI report
+    ai_html = f"""
     <div class="ai-report-container">
         <div class="ai-report-content">
             <div class="ai-report-badge">🤖 AI Generated • Security Analysis</div>
@@ -477,7 +473,7 @@ if st.session_state.results:
             <div class="ai-recommendations">
                 <strong style="color: #00b4d8;">💡 Recommendations</strong>
                 <ul style="margin: 0.5rem 0 0 0; padding-left: 0; list-style-type: none;">
-                    {rec_html}
+                    {rec_items}
                 </ul>
             </div>
             
@@ -488,7 +484,12 @@ if st.session_state.results:
     </div>
     """
     
-    st.markdown(html_content, unsafe_allow_html=True)
+    # Use st.html() to render raw HTML (most reliable method)
+    try:
+        st.html(ai_html)
+    except AttributeError:
+        # Fallback for older Streamlit versions
+        st.markdown(ai_html, unsafe_allow_html=True)
     
     # ---------- Row 4: Raw Data (Expandable) ----------
     with st.expander("📋 View Raw Scan Data (JSON)"):
